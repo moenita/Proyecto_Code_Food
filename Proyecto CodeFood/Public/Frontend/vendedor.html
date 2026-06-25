@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeFood — Panel Vendedor</title>
+    <link rel="icon" href="https://i.ibb.co/99FrdMtT/logo-oficial-codefood.png" type="image/png">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Supabase JS (para Realtime) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="vendedor-styles.css">
+</head>
+<body>
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-brand">
+            <img src="https://i.ibb.co/99FrdMtT/logo-oficial-codefood.png" alt="CodeFood">
+            <h1>Code<span>Food</span></h1>
+            <span class="header-badge">Panel Vendedor</span>
+        </div>
+        <div class="header-right">
+            <span class="live-dot">En línea</span>
+            <span class="clock">{{ horaActual }}</span>
+        </div>
+    </header>
+
+    <!-- STATS -->
+    <div class="stats-bar">
+        <div class="stat-block">
+            <i class="fas fa-bell" style="color:#f5c518"></i>
+            <div><div class="stat-label">Nuevos</div><div class="stat-value" style="color:#f5c518">{{ totalNuevos }}</div></div>
+        </div>
+        <div class="stat-block">
+            <i class="fas fa-fire" style="color:#f97316"></i>
+            <div><div class="stat-label">Preparando</div><div class="stat-value" style="color:#f97316">{{ totalPreparando }}</div></div>
+        </div>
+        <div class="stat-block">
+            <i class="fas fa-check-circle" style="color:#22c55e"></i>
+            <div><div class="stat-label">Listos</div><div class="stat-value" style="color:#22c55e">{{ totalListos }}</div></div>
+        </div>
+        <div class="stat-block">
+            <i class="fas fa-shopping-bag" style="color:#888"></i>
+            <div><div class="stat-label">Entregados hoy</div><div class="stat-value" style="color:#888">{{ totalEntregados }}</div></div>
+        </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+        <div class="filter-group">
+            <button class="filter-btn" :class="{ active: filtro === 'todos' }"    @click="filtro = 'todos'">Activos</button>
+            <button class="filter-btn" :class="{ active: filtro === 'nuevo' }"    @click="filtro = 'nuevo'"><i class="fas fa-bell" style="font-size:0.7rem"></i> Nuevos</button>
+            <button class="filter-btn" :class="{ active: filtro === 'listo' }"    @click="filtro = 'listo'"><i class="fas fa-check" style="font-size:0.7rem"></i> Listos</button>
+            <button class="filter-btn" :class="{ active: filtro === 'historial' }" @click="filtro = 'historial'">Historial</button>
+        </div>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input v-model="busqueda" type="text" placeholder="Buscar por # o plato…">
+        </div>
+    </div>
+
+    <!-- LISTA DE PEDIDOS -->
+    <div class="pedidos-container">
+        <div v-if="pedidosFiltrados.length === 0" class="empty-state">
+            <i class="fas fa-utensils"></i>
+            <p>No hay pedidos en esta vista.</p>
+        </div>
+
+        <div v-for="pedido in pedidosFiltrados" :key="pedido.id"
+            class="pedido-card" :class="`estado-${pedido.estado}`">
+
+            <div class="pedido-num">{{ pedido.id }}<small>PEDIDO</small></div>
+
+            <div class="pedido-info">
+                <div class="pedido-plato">
+                    {{ pedido.plato }}
+                    <span v-if="pedido.estado === 'nuevo'" class="nuevo-badge ml-1">NUEVO</span>
+                </div>
+                <div class="pedido-meta">
+                    <span v-if="pedido.nombre"><i class="fas fa-user"></i> {{ pedido.nombre }}</span>
+                    <span v-if="pedido.bebida"><i class="fas fa-wine-glass-alt"></i> {{ pedido.bebida }}</span>
+                    <span v-if="pedido.extra"><i class="fas fa-star"></i> {{ pedido.extra }}</span>
+                    <span><i class="fas fa-clock"></i> Retiro: {{ pedido.hora }}</span>
+                    <span><i class="fas fa-credit-card"></i> {{ pedido.pago }}</span>
+                    <span><i class="fas fa-history"></i> {{ tiempoRel(pedido.created_at) }}</span>
+                </div>
+            </div>
+
+            <span class="estado-badge" :class="`badge-${pedido.estado}`">{{ estadoLabel(pedido.estado) }}</span>
+
+            <div class="pedido-acciones">
+                <button v-if="pedido.estado === 'nuevo' || pedido.estado === 'preparando'"
+                    class="btn-accion btn-listo" @click="marcarListo(pedido)">
+                    <i class="fas fa-check"></i> Listo
+                </button>
+                <button v-if="pedido.estado === 'listo'"
+                    class="btn-accion btn-entregado" @click="marcarEntregado(pedido)">
+                    <i class="fas fa-shopping-bag"></i> Entregado
+                </button>
+                <button v-if="pedido.estado !== 'entregado' && pedido.estado !== 'cancelado'"
+                    class="btn-accion btn-cancelar" @click="cancelarPedido(pedido)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" @click="abrirModal">
+        <i class="fas fa-plus"></i> Agregar pedido manual
+    </button>
+
+    <!-- MODAL -->
+    <div v-if="mostrarModal" class="modal-overlay" @click.self="cerrarModal">
+        <div class="modal">
+            <h2><i class="fas fa-plus-circle" style="color:#cc1f1f;margin-right:8px"></i>Nuevo Pedido Manual</h2>
+            <div class="form-group">
+                <label>Plato Principal *</label>
+                <select v-model="form.plato">
+                    <option>Pollo a la Plancha</option>
+                    <option>Pasta Boloñesa</option>
+                    <option>Ensalada Vegetariana</option>
+                    <option>Completo Italiano</option>
+                    <option>Salchipapas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Bebida</label>
+                <select v-model="form.bebida">
+                    <option value="">Sin bebida</option>
+                    <option>Agua Mineral</option>
+                    <option>Bebida en Lata</option>
+                    <option>Jugo Natural</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Extra</label>
+                <select v-model="form.extra">
+                    <option value="">Sin extra</option>
+                    <option>Postre del Día</option>
+                    <option>Pan Amasado</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Hora de Retiro</label>
+                <select v-model="form.hora">
+                    <option>13:00 Hrs</option>
+                    <option>13:20 Hrs</option>
+                    <option>13:40 Hrs</option>
+                    <option>14:00 Hrs</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Método de Pago</label>
+                <select v-model="form.pago">
+                    <option>Pagar en el Casino (Tarjeta)</option>
+                    <option>Pagar en el Casino (Efectivo)</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" @click="cerrarModal">Cancelar</button>
+                <button class="btn-primary" @click="agregarPedido"><i class="fas fa-plus"></i> Registrar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div v-if="toast.visible" class="toast"
+        :class="{ 'toast-red': toast.tipo === 'red', 'toast-orange': toast.tipo === 'orange' }">
+        <i class="fas fa-check-circle" v-if="toast.tipo === 'green'" style="color:#22c55e"></i>
+        <i class="fas fa-times-circle" v-if="toast.tipo === 'red'"   style="color:#cc1f1f"></i>
+        <i class="fas fa-bell"         v-if="toast.tipo === 'orange'" style="color:#f97316"></i>
+        {{ toast.msg }}
+    </div>
+</div>
+
+<!--
+    Las credenciales de Supabase se inyectan aquí desde server.js
+    usando la ANON key (segura para el frontend, solo lectura pública).
+    La SERVICE key NUNCA llega al navegador.
+-->
+<script id="supabase-config">
+    // Estos valores son reemplazados dinámicamente por server.js
+    const SUPABASE_URL      = '%%SUPABASE_URL%%';
+    const SUPABASE_ANON_KEY = '%%SUPABASE_ANON_KEY%%';
+    if (SUPABASE_URL && !SUPABASE_URL.includes('%%')) {
+        window.__SUPABASE_CLIENT__ = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+</script>
+<script src="vendedor-app.js"></script>
+</body>
+</html>

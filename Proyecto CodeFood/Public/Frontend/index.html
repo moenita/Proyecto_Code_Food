@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeFood</title>
+    <link rel="icon" href="https://i.ibb.co/99FrdMtT/logo-oficial-codefood.png" type="image/png">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app" class="min-h-screen">
+
+    <!-- HEADER -->
+    <header class="bg-[#1a1a1a] text-white p-4 shadow-xl border-b-4 border-red-700">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <img src="https://i.ibb.co/99FrdMtT/logo-oficial-codefood.png" width="120">
+                <h1 class="text-3xl text-red-500 font-bold tracking-tighter">
+                    Code<span class="text-3xl text-yellow-500">Food</span>
+                </h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="container mx-auto py-8 px-4">
+        <section class="bg-neutral-800 text-white p-6 rounded-t-xl mb-1 border-b-2 border-red-600">
+            <h2 class="text-3xl font-bold italic">¡Pide y Retira sin Filas!</h2>
+            <p class="text-gray-400">Haz tu pedido anticipado en el casino.</p>
+            <div class="flex flex-wrap gap-4 mt-6 text-xs md:text-sm items-center opacity-80">
+                <span class="flex items-center gap-2"><i class="fas fa-utensils text-red-500"></i> Selecciona pedido</span>
+                <i class="fas fa-chevron-right text-[10px]"></i>
+                <span class="flex items-center gap-2"><i class="fas fa-clock text-red-500"></i> Elige hora</span>
+                <i class="fas fa-chevron-right text-[10px]"></i>
+                <span class="flex items-center gap-2"><i class="fas fa-shopping-bag text-red-500"></i> Confirma y Retira</span>
+            </div>
+        </section>
+
+        <div class="grid lg:grid-cols-3 gap-6 mt-6">
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="lg:col-span-2 space-y-4">
+
+                <!-- Acordeón: Platos Principales -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <button @click="toggleSection('principales')"
+                        class="w-full flex justify-between items-center p-5 text-left font-bold text-gray-800 hover:bg-gray-50 transition">
+                        <span class="flex items-center gap-3">
+                            <i class="fas fa-utensils text-red-600"></i>
+                            Platos Principales
+                        </span>
+                        <i class="fas fa-chevron-down text-red-600 accordion-icon" :class="{ rotated: openSections.principales }"></i>
+                    </button>
+                    <div class="accordion-content" :class="{ open: openSections.principales }">
+                        <div class="p-5 pt-0">
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div v-for="item in menu" :key="item.id" class="border rounded-lg overflow-hidden hover:shadow-md transition">
+                                    <img :src="item.img" class="w-full h-32 object-cover" :alt="item.nombre">
+                                    <div class="p-3">
+                                        <h4 class="font-bold text-sm h-10">{{ item.nombre }}</h4>
+                                        <p class="text-red-700 font-bold mb-2">${{ item.precio.toLocaleString('es-CL') }}</p>
+                                        <button @click="seleccionar(item)"
+                                            :class="item.selected ? 'bg-green-600' : 'bg-red-700'"
+                                            class="w-full text-white text-xs py-2 rounded font-bold uppercase hover:opacity-90 transition">
+                                            {{ item.selected ? '✓ Seleccionado' : 'Seleccionar' }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acordeón: Bebidas -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <button @click="toggleSection('bebidas')"
+                        class="w-full flex justify-between items-center p-5 text-left font-bold text-gray-800 hover:bg-gray-50 transition">
+                        <span class="flex items-center gap-3">
+                            <i class="fas fa-wine-glass-alt text-red-600"></i> Bebidas
+                        </span>
+                        <i class="fas fa-chevron-down text-red-600 accordion-icon" :class="{ rotated: openSections.bebidas }"></i>
+                    </button>
+                    <div class="accordion-content" :class="{ open: openSections.bebidas }">
+                        <div class="p-5 pt-0 space-y-2">
+                            <div v-for="beb in bebidas" :key="beb.id"
+                                class="flex justify-between items-center bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                                @click="seleccionarBebida(beb)" :class="beb.selected ? 'ring-2 ring-green-500' : ''">
+                                <span class="text-sm flex items-center gap-2">
+                                    <i :class="beb.icono + ' text-red-500'"></i>
+                                    {{ beb.nombre }}
+                                    <span v-if="beb.selected" class="text-green-600 font-bold text-xs">✓</span>
+                                </span>
+                                <span class="font-bold text-sm">${{ beb.precio.toLocaleString('es-CL') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acordeón: Extras -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <button @click="toggleSection('extras')"
+                        class="w-full flex justify-between items-center p-5 text-left font-bold text-gray-800 hover:bg-gray-50 transition">
+                        <span class="flex items-center gap-3">
+                            <i class="fas fa-star text-red-600"></i> Extras
+                        </span>
+                        <i class="fas fa-chevron-down text-red-600 accordion-icon" :class="{ rotated: openSections.extras }"></i>
+                    </button>
+                    <div class="accordion-content" :class="{ open: openSections.extras }">
+                        <div class="p-5 pt-0 space-y-2">
+                            <div v-for="extra in extras" :key="extra.id"
+                                class="flex justify-between items-center bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                                @click="seleccionarExtra(extra)" :class="extra.selected ? 'ring-2 ring-green-500' : ''">
+                                <span class="text-sm flex items-center gap-2">
+                                    <i :class="extra.icono + ' text-red-500'"></i>
+                                    {{ extra.nombre }}
+                                    <span v-if="extra.selected" class="text-green-600 font-bold text-xs">✓</span>
+                                </span>
+                                <span class="font-bold text-sm">${{ extra.precio.toLocaleString('es-CL') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA -->
+            <div class="space-y-6">
+                <div class="bg-[#222] text-white p-6 rounded-xl shadow-2xl border-l-4 border-red-700">
+                    <h3 class="text-lg font-bold mb-4 italic">Reserva tu Hora</h3>
+
+                    <!-- Resumen -->
+                    <div v-if="itemSeleccionado || bebidaSeleccionada || extraSeleccionado"
+                        class="mb-4 bg-neutral-900 rounded-lg p-3 text-xs space-y-1">
+                        <p class="text-gray-400 font-semibold uppercase mb-2">Resumen</p>
+                        <p v-if="itemSeleccionado" class="flex justify-between">
+                            <span>{{ itemSeleccionado.nombre }}</span>
+                            <span>${{ itemSeleccionado.precio.toLocaleString('es-CL') }}</span>
+                        </p>
+                        <p v-if="bebidaSeleccionada" class="flex justify-between">
+                            <span>{{ bebidaSeleccionada.nombre }}</span>
+                            <span>${{ bebidaSeleccionada.precio.toLocaleString('es-CL') }}</span>
+                        </p>
+                        <p v-if="extraSeleccionado" class="flex justify-between">
+                            <span>{{ extraSeleccionado.nombre }}</span>
+                            <span>${{ extraSeleccionado.precio.toLocaleString('es-CL') }}</span>
+                        </p>
+                        <div class="border-t border-neutral-700 pt-1 mt-1 flex justify-between font-bold text-yellow-400">
+                            <span>Total</span>
+                            <span>${{ totalPedido.toLocaleString('es-CL') }}</span>
+                        </div>
+                    </div>
+                    <p v-else class="text-xs text-gray-500 mb-4 italic">Selecciona al menos un plato para continuar.</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Nombre para el retiro</label>
+                            <input type="text" v-model="reserva.nombre" placeholder="Ej: Juan Pérez"
+                                class="w-full bg-neutral-800 border border-neutral-700 p-2 rounded text-sm focus:ring-2 ring-red-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Hora de Retiro</label>
+                            <select v-model="reserva.hora" class="w-full bg-neutral-800 border border-neutral-700 p-2 rounded text-sm focus:ring-2 ring-red-500 outline-none">
+                                <option>13:00 Hrs</option>
+                                <option>13:20 Hrs</option>
+                                <option>13:40 Hrs</option>
+                                <option>14:00 Hrs</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Método de Pago</label>
+                            <select v-model="reserva.pago" class="w-full bg-neutral-800 border border-neutral-700 p-2 rounded text-sm focus:ring-2 ring-red-500 outline-none">
+                                <option>Pagar en el Casino (Tarjeta)</option>
+                                <option>Pagar en el Casino (Efectivo)</option>
+                            </select>
+                        </div>
+
+                        <!-- Mensaje de error -->
+                        <p v-if="errorMsg" class="text-red-400 text-xs bg-red-900/30 p-2 rounded">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ errorMsg }}
+                        </p>
+
+                        <button @click="confirmarPedido" :disabled="!puedeConfirmar"
+                            :class="puedeConfirmar ? 'bg-red-700 hover:bg-red-800 cursor-pointer' : 'bg-neutral-600 cursor-not-allowed opacity-50'"
+                            class="w-full text-white font-bold py-3 rounded-lg shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+                            <i v-if="cargando" class="fas fa-spinner fa-spin"></i>
+                            {{ cargando ? 'Registrando...' : 'Confirmar Pedido' }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirmación -->
+                <div v-if="pedidoGenerado" class="bg-white p-6 rounded-xl shadow-sm border text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-check-circle text-green-600 text-3xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-800 mb-1 italic text-lg">¡Pedido Confirmado!</h3>
+                    <p class="text-gray-500 text-xs mb-3">Tu pedido ha sido registrado exitosamente.</p>
+                    <div class="bg-red-700 text-white py-2 px-4 rounded inline-block font-mono font-bold text-lg mb-3">
+                        Pedido #{{ reserva.id }}
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3 text-xs text-left space-y-1">
+                        <p><span class="text-gray-400">Nombre:</span> <span class="font-semibold">{{ reserva.nombre }}</span></p>
+                        <p><span class="text-gray-400">Hora de retiro:</span> <span class="font-semibold">{{ reserva.hora }}</span></p>
+                        <p><span class="text-gray-400">Pago:</span> <span class="font-semibold">{{ reserva.pago }}</span></p>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-3 italic">Presenta este número al retirar tu comida.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- FOOTER -->
+<footer class="bg-black text-white mt-20 border-t-4 border-red-600">
+    <div class="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+            <img src="https://i.ibb.co/rR3ZmYpf/logo-nocelis-fit1.png" width="100">
+        </div>
+        <div class="text-sm text-gray-400 text-center">
+            Desarrollado por <span class="text-white font-semibold">Nocelis Team</span>
+        </div>
+        <div class="text-center">
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLScUv1sazC6m-rKHpi3Et0SCYGaufAelsirVj2LmD19vq-SG8Q/viewform?usp=publish-editor"
+                target="_blank" rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 bg-red-700 hover:bg-red-600 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
+                <i class="fas fa-star"></i> Califica tu experiencia
+            </a>
+        </div>
+    </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
